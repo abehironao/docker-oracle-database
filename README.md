@@ -1,6 +1,6 @@
 # Docker OracleDatabase
-ローカルのDocker環境に、OracleDatabaseを構築する手順
-PHP Laravelで、CRADのサンプルを作成してデータベースの操作までが確認できる
+ローカルのDocker環境に、OracleDatabaseを構築する手順  
+PHP Laravelの、artisanコマンドでデータベースの操作までが確認できる
 
 ## 構築環境
 ```
@@ -10,6 +10,7 @@ Apple M2 Pro
 _Apple Siliconは、使えるエディションが限定されている_
 
 ## 成果物
+```
 ./
 ├── docker-compose.yml
 ├── docker-images
@@ -21,7 +22,7 @@ _Apple Siliconは、使えるエディションが限定されている_
 │   │       │   ├── 19.3.0
 │   │       │   │ ...
 │   │       │   │   ├── LINUX.ARM64_1919000_db_home.zip
-│   ... 
+│   ...     ... ... ... 
 ├── nginx
 │   └── default.conf
 ├── oracle
@@ -35,9 +36,15 @@ _Apple Siliconは、使えるエディションが限定されている_
 │   └── php
 │       └── php.ini
 └── work
-
-ここまだ
-
+    │
+    ... 
+```
+```
+Oracle Database 19c
+Nginx 1.23.3
+PHP 8.3
+Laravel 11
+```
 ## Docker
 ```
 Docker version 25.0.3, build 4debf41
@@ -129,17 +136,84 @@ $ mv ~/Downloads/instantclient-*.zip ./web
 _zipのまま、web直下に格納する_
 
 ## Build and Up
-
 ```bash
 $ docker-compose build
 $ docker-compose up -d
 ```
 
-## Laravel
+## Oracle Database接続ローカルユーザ作成
+_ローカルユーザは、PDB上に作成する必要がある_
+```bash
+$ docker exec -it oracle bash
+```
+```bash
+bash-4.4$ sqlplus system/passw0rd@ORCLCDB
+```
+```sql
+SQL> alter session set container=ORCLPDB1;
+```
+```
+Session altered.
+```
+```sql
+SQL> create user DB_USER identified by db_pass;
+```
+```
+User created.
+```
+```sql
+SQL> grant connect, resource to DB_USER;
+```
+```shell
+Grant succeeded.
+```
+```sql
+SQL> alter user DB_USER quota unlimited on users;
+```
+```
+User altered.
+```
+
+# Laravel
+## インストール
 ```bash
 $ docker exec -it docker-oracle-database-web-1 bash
 ```
-
 ```bash
 root@62dc08dfabf5:/var/www/html# composer install
 ```
+## Oracle Database接続情報
+```bash
+root@62dc08dfabf5:/var/www/html# vi .env
+```
+```diff
+...
+-DB_CONNECTION=mysql
+-DB_HOST=127.0.0.1
+-DB_PORT=3306
+-DB_DATABASE=laravel
+-DB_USERNAME=root
+-DB_PASSWORD=
+
++DB_CONNECTION=oracle
++DB_HOST=oracle
++DB_PORT=1521
++DB_SERVICE_NAME=ORCLPDB1
++DB_DATABASE=
++DB_USERNAME=DB_USER
++DB_PASSWORD=db_pass
+...
+```
+## artisan マイグレーション
+```bash
+root@62dc08dfabf5:/var/www/html# php artisan migrate
+```
+
+## artisan シーダ
+```bash
+root@62dc08dfabf5:/var/www/html# php artisan db:seed --class=ColorsSeeder
+```
+
+# クライアントツール
+Oracle Databaseはコンソールで操作するにはクセがあるので、GUIのクラアントスールのがおすすめ  
+[DBeaverを公式からダウンロード](https://dbeaver.io/download/)
